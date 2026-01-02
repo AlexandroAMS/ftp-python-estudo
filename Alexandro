@@ -1,0 +1,134 @@
+from ftplib import FTP, error_perm
+import socket
+
+def validar_ip(ip):
+    try:
+        socket.inet_aton(ip)
+        return True
+    except socket.error:
+        return False
+
+
+def conectar_ftp():
+    host = input("Digite o IP do servidor FTP: ").strip()
+
+    if not validar_ip(host):
+        print("IP inválido.")
+        return None
+
+    usuario = input("Usuário: ").strip()
+    senha = input("Senha: ").strip()
+
+    try:
+        ftp = FTP(host, timeout=10)
+        print("\nConectado com sucesso!")
+        print(ftp.getwelcome())
+
+        ftp.login(usuario, senha)
+        print("Login realizado com sucesso!\n")
+
+        return ftp
+
+    except error_perm:
+        print("Erro: usuário ou senha inválidos.")
+    except Exception as e:
+        print("Erro ao conectar:", e)
+
+    return None
+
+
+def listar_arquivos(ftp):
+    print("\n📂 Listagem de arquivos:")
+    ftp.retrlines("LIST")
+
+
+def listar_nomes_simples(ftp):
+    print("\n📄 Arquivos (lista simples):")
+    arquivos = ftp.nlst()
+    for a in arquivos:
+        print(a)
+
+
+def mudar_diretorio(ftp):
+    pasta = input("Digite o caminho do diretório: ").strip()
+    try:
+        ftp.cwd(pasta)
+        print("Diretório atual:", ftp.pwd())
+    except error_perm:
+        print("Erro: diretório não encontrado ou sem permissão.")
+
+
+def download_arquivo(ftp):
+    nome = input("Digite o nome do arquivo para download: ").strip()
+    try:
+        with open(nome, "wb") as f:
+            ftp.retrbinary(f"RETR {nome}", f.write)
+        print("Download concluído:", nome)
+    except Exception as e:
+        print("Erro no download:", e)
+
+
+def upload_arquivo(ftp):
+    nome = input("Digite o nome do arquivo para upload: ").strip()
+    try:
+        with open(nome, "rb") as f:
+            ftp.storbinary(f"STOR {nome}", f)
+        print("Upload concluído:", nome)
+    except FileNotFoundError:
+        print("Arquivo não encontrado no computador.")
+    except Exception as e:
+        print("Erro no upload:", e)
+
+
+def menu():
+    print("""
+========= MENU FTP =========
+1 - Listar arquivos (detalhado)
+2 - Listar arquivos (simples)
+3 - Mudar diretório
+4 - Download de arquivo
+5 - Upload de arquivo
+6 - Mostrar diretório atual
+0 - Sair
+============================
+""")
+
+
+def main():
+    ftp = conectar_ftp()
+    if not ftp:
+        return
+
+    while True:
+        menu()
+        opcao = input("Escolha uma opção: ").strip()
+
+        if opcao == "1":
+            listar_arquivos(ftp)
+
+        elif opcao == "2":
+            listar_nomes_simples(ftp)
+
+        elif opcao == "3":
+            mudar_diretorio(ftp)
+
+        elif opcao == "4":
+            download_arquivo(ftp)
+
+        elif opcao == "5":
+            upload_arquivo(ftp)
+
+        elif opcao == "6":
+            print("Diretório atual:", ftp.pwd())
+
+        elif opcao == "0":
+            print("Encerrando conexão...")
+            ftp.quit()
+            break
+
+        else:
+            print("Opção inválida. Tente novamente.")
+
+
+if __name__ == "__main__":
+    main()
